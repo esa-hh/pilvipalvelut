@@ -1,55 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import LoginForm from "./LoginForm";
+import { auth, logout } from "./authService";
+import "./App.css";
 
-// 3.3. Funktio koodinimen generointiin
 function generateCodename() {
   const adjectives = ["Sneaky", "Electric", "Silent", "Hyper", "Cosmic"];
   const animals = ["Fox", "Panda", "Lizard", "Dragon", "Hawk"];
   const number = Math.floor(Math.random() * 3000);
-
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const animal = animals[Math.floor(Math.random() * animals.length)];
-
-  return `${adj}${animal}${number}`;
+  return `${adjectives[Math.floor(Math.random() * adjectives.length)]}${animals[Math.floor(Math.random() * animals.length)]}${number}`;
 }
 
 function App() {
+  const [user, setUser] = useState(null);
   const [codename, setCodename] = useState("");
 
   useEffect(() => {
-    // 3.2. & 3.4. Tarkistetaan löytyykö Local Storagesta jo koodinimi
-    const cachedName = localStorage.getItem("codename");
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
 
-    if (cachedName) {
-      setCodename(cachedName);
-    } else {
-      const newName = generateCodename();
-      localStorage.setItem("codename", newName);
-      setCodename(newName);
-    }
+      if (firebaseUser) {
+        // Tehtävä 4.10: Käytetään Firebase UID:tä avaimena Local Storagessa
+        const storageKey = `codename_${firebaseUser.uid}`;
+        const cachedName = localStorage.getItem(storageKey);
+
+        if (cachedName) {
+          setCodename(cachedName);
+        } else {
+          const newName = generateCodename();
+          localStorage.setItem(storageKey, newName);
+          setCodename(newName);
+        }
+      } else {
+        setCodename("");
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
-
-  const handleReset = () => {
-    const newName = generateCodename();
-    localStorage.setItem("codename", newName);
-    setCodename(newName);
-  };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px", fontFamily: "sans-serif" }}>
-      <h1>Salainen Agentti -portaali</h1>
-      <p>Tervetuloa järjestelmään!</p>
-      
-      <div style={{ background: "#f0f4f8", color: "#333", padding: "20px", display: "inline-block", borderRadius: "8px", marginTop: "20px" }}>
-        <h3>Koodinimesi:</h3>
-        <h2 style={{ color: "#0066cc" }}>{codename}</h2>
-      </div>
+      <h1>Firebase Auth + Koodinimi -portaali</h1>
 
-      <div style={{ marginTop: "20px" }}>
-        <button onClick={handleReset} style={{ padding: "10px 15px", cursor: "pointer" }}>
-          Arvo uusi koodinimi
-        </button>
-      </div>
+      {user ? (
+        <div style={{ background: "#f0f4f8", color: "#333", padding: "20px", display: "inline-block", borderRadius: "8px" }}>
+          <h2>👋 Tervetuloa, {codename}</h2>
+          <p>Kirjautunut sähköposti: <strong>{user.email}</strong></p>
+          <button onClick={logout} style={{ padding: "8px 16px", cursor: "pointer", marginTop: "10px" }}>
+            Kirjaudu ulos
+          </button>
+        </div>
+      ) : (
+        <LoginForm />
+      )}
     </div>
   );
 }
