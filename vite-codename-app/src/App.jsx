@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import LoginForm from "./LoginForm";
+import ConsentBanner from "./components/ConsentBanner";
+import { useCloudflareAnalytics } from "./useCloudflareAnalytics";
 import { auth, logout } from "./authService";
 import { onAuthStateChanged } from "firebase/auth";
 import { getOrCreateCodename } from "./codenameService";
@@ -18,6 +20,16 @@ function App() {
   const [session, setSession] = useState(null);
   const [codename, setCodename] = useState("");
   const [user, setUser] = useState(null);
+
+  const { trackEvent } = useCloudflareAnalytics();
+  const initialReferrer = useRef(document.referrer || "direct");
+
+  useEffect(() => {
+    trackEvent("page_view", {
+      referrer: initialReferrer.current,
+      landingPath: window.location.pathname,
+    });
+  }, [trackEvent]);
 
   useEffect(() => {
     let unsubscribeSession = null;
@@ -105,6 +117,7 @@ function App() {
   return (
     <div style={{ maxWidth: "600px", margin: "40px auto", textAlign: "center", fontFamily: "sans-serif" }}>
       <h1>🎮 Moninpelinä toimiva Hintavisa</h1>
+      <ConsentBanner />
 
       <div style={{ marginBottom: "20px", padding: "15px", background: "#f5f5f5", borderRadius: "8px" }}>
         {user ? (
